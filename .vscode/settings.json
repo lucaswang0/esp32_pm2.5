@@ -1,0 +1,14 @@
+{
+    "idf.currentSetup": "D:\\esp\\v6.0.3\\esp-idf",
+    "idf.openOcdConfigs": [
+      "board/esp32c3-builtin.cfg"
+    ],
+    "idf.customExtraVars": {},
+    "clangd.path": "d:\\esp\\v6.1\\tools\\esp-clangd\\esp-21.1.3_20260408\\esp-clangd\\bin\\clangd.exe",
+    "clangd.arguments": [
+      "--background-index",
+      "--query-driver=**",
+      "--compile-commands-dir=c:\\Users\\user\\Documents\\PlatformIO\\Projects\\esp32_pm2.5\\build"
+    ],
+    "idf.port": "COM4"
+}
