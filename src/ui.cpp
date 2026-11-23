@@ -118,16 +118,25 @@ static void drawFrame(LovyanGFX &g, const UiData &d) {
   uint16_t dot = d.fault ? C_RED : (d.relayOn ? C_GREEN : C_DIM);
   g.fillCircle(8, 122, 2, dot);
 
-  // 小状态字：WARMUP / NO SENSOR / FAN ERR（正常时显示模式）
-  g.setFont(&lgfx::fonts::Font0);
-  g.setTextDatum(lgfx::textdatum_t::middle_left);
-  g.setTextColor(d.fault ? C_RED : (d.warmup ? C_YELLOW : (!d.pmValid ? C_YELLOW : C_DIM)));
-  const char *subState = d.warmup ? "WARMUP"
-                        : (!d.pmValid) ? "NO SENSOR"
-                        : (d.fault) ? "FAN ERR"
-                                    : d.mode;
-  snprintf(buf, sizeof(buf), "%s", subState);
-  g.drawString(buf, 14, 122);
+  // 异常/未就绪提示：屏幕中央闪烁（约 1Hz），正常时隐藏
+  const char *alert = d.warmup ? "WARMUP"
+                      : (!d.pmValid) ? "NO SENSOR"
+                      : (d.fault) ? "FAN ERR"
+                                  : nullptr;
+  if (alert && ((millis() / 500) & 1)) {
+    uint16_t alertColor = d.fault ? C_RED : C_YELLOW;
+    g.setFont(&lgfx::fonts::FreeSansBold9pt7b);
+    int bh = 20;
+    int bw = g.textWidth(alert) + 18;
+    if (bw > TFT_WIDTH_PX - 8) bw = TFT_WIDTH_PX - 8;
+    int bx = (TFT_WIDTH_PX - bw) / 2;
+    int by = (TFT_HEIGHT_PX - bh) / 2;
+    g.fillRoundRect(bx, by, bw, bh, 8, C_CARD);
+    g.drawRoundRect(bx, by, bw, bh, 8, alertColor);
+    g.setTextDatum(lgfx::textdatum_t::middle_center);
+    g.setTextColor(alertColor);
+    g.drawString(alert, TFT_WIDTH_PX / 2, TFT_HEIGHT_PX / 2);
+  }
 }
 
 void uiBegin() {
