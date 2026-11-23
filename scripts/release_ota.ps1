@@ -22,7 +22,7 @@ $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $ConfigFile  = Join-Path $ProjectRoot "include\config.h"
 $BuildDir    = Join-Path $ProjectRoot ".pio\build\esp32c3-supermini"
 $BinFile     = Join-Path $BuildDir "firmware.bin"
-$OutDir      = Join-Path $ProjectRoot "firmware"
+$OutDir      = Join-Path $ProjectRoot ".pio\ota"   # 临时产物目录（被 .gitignore 忽略）
 $PioExe      = "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe"
 $PagesUrl    = "https://lucaswang0.github.io/esp32_pm2.5"
 
@@ -118,11 +118,14 @@ if ($AutoPush) {
         git checkout gh-pages
         git pull origin gh-pages 2>$null
 
-        $oldBins = Get-ChildItem -Path (Join-Path $ProjectRoot "firmware") -Filter "*.bin" -ErrorAction SilentlyContinue
+        $fwDir = Join-Path $ProjectRoot "firmware"
+        New-Item -ItemType Directory -Force -Path $fwDir | Out-Null
+
+        $oldBins = Get-ChildItem -Path $fwDir -Filter "*.bin" -ErrorAction SilentlyContinue
         if ($oldBins) { $oldBins | Remove-Item -Force }
 
-        Copy-Item $binDest  (Join-Path $ProjectRoot "firmware\") -Force
-        Copy-Item $jsonDest (Join-Path $ProjectRoot "firmware\") -Force
+        Copy-Item $binDest  $fwDir -Force
+        Copy-Item $jsonDest $fwDir -Force
 
         git add firmware/
         git commit -m "OTA: release v$Version"
@@ -132,12 +135,13 @@ if ($AutoPush) {
         git checkout --orphan gh-pages
         git reset
 
-        # orphan 分支会残留未跟踪文件，先清空工作区
+        # orphan 分支会残留 main 的未跟踪文件，先清空工作区
         git clean -fd
 
-        New-Item -ItemType Directory -Force -Path firmware | Out-Null
-        Copy-Item $binDest  (Join-Path $ProjectRoot "firmware\") -Force
-        Copy-Item $jsonDest (Join-Path $ProjectRoot "firmware\") -Force
+        $fwDir = Join-Path $ProjectRoot "firmware"
+        New-Item -ItemType Directory -Force -Path $fwDir | Out-Null
+        Copy-Item $binDest  $fwDir -Force
+        Copy-Item $jsonDest $fwDir -Force
 
         '<!doctype html><title>ESP32 PM2.5 OTA</title><p>Firmware: <a href="firmware/">firmware/</a></p>' | Set-Content index.html
 

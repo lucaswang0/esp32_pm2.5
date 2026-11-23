@@ -156,5 +156,6 @@ src/ui.*              状态数据结构与界面刷新
 src/Display.*         LovyanGFX 显示封装
 scripts/release_ota.ps1  一键编译 + 生成 OTA 固件 + 推 gh-pages
 .github/workflows/ota_release.yml  GitHub Actions 自动发布（tag 触发）
-firmware/             OTA 产物目录（gh-pages 分支上的发布点）
 ```
+
+> OTA 产物生成在 `.pio/ota/`（已忽略），发布时只推送到 `gh-pages` 分支的 `firmware/` 目录，主分支不跟踪固件二进制。

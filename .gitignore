@@ -3,6 +3,9 @@
 build/
 compile_commands.json
 
+# OTA 发布产物（只存在于 gh-pages 分支，主分支不跟踪）
+firmware/
+
 # VS Code 本地生成文件（settings.json / extensions.json 保留）
 .vscode/.browse.c_cpp.db*
 .vscode/c_cpp_properties.json
