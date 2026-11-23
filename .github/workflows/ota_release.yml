@@ -1,0 +1,97 @@
+# ============================================================================
+# ESP32 PM2.5 风扇 - OTA 自动发布
+# 触发：push tag vYYYYMMDD（比如 v20261123）
+# 产出：固件 .bin + version.json 自动发布到 GitHub Pages（gh-pages 分支）
+# ============================================================================
+name: OTA Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'  # v20261123
+  workflow_dispatch:                                 # 允许手动触发
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PlatformIO
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install platformio
+
+      - name: Build firmware
+        run: pio run
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          # 去掉 v 前缀，得到 YYYYMMDD
+          VERSION="${TAG#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Set FIRMWARE_VERSION in config.h (sanity)
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "Requested version: $VERSION"
+          grep -E 'FIRMWARE_VERSION\s+"' include/config.h || true
+
+      - name: Prepare OTA assets
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          SIZE=$(stat -c%s .pio/build/esp32c3-supermini/firmware.bin)
+
+          mkdir -p firmwares/firmware
+          BIN_NAME="pm2_fan_v${VERSION}.bin"
+          cp .pio/build/esp32c3-supermini/firmware.bin "firmwares/firmware/${BIN_NAME}"
+
+          # 生成 version.json（Pages 部署后 URL 为 https://lucaswang0.github.io/esp32_pm2.5/firmware/）
+          cat > firmwares/firmware/version.json <<EOF
+          {
+            "version": "${VERSION}",
+            "url": "https://lucaswang0.github.io/esp32_pm2.5/firmware/${BIN_NAME}",
+            "size": ${SIZE},
+            "build_time": "$(date -u '+%Y-%m-%d %H:%M:%S UTC')",
+            "commit": "${GITHUB_SHA}"
+          }
+          EOF
+
+          echo "==> 生成的文件:"
+          ls -la firmwares/firmware/
+          echo "==> version.json:"
+          cat firmwares/firmware/version.json
+
+      - name: Upload to Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: firmwares
+
+      - name: Upload binary to Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          files: firmwares/firmware/*
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -32,10 +32,23 @@
 #define SY210_TIMEOUT_MS  3000   // 超过该时间无有效帧视为数据失效
 #define SY210_DEBUG_RAW   0      // 1 = 打印每帧原始字节
 
-// 触摸开关（TTP223 类模块，输出数字电平）
+// 触摸开关（TTP223 类模块，输出数字电平，三档时间窗口）
+// < 300ms 短按 → AUTO↔MANUAL_FULL
+// 500~3000ms 中按 → MANUAL_FULL↔MANUAL_STOP
+// >= 3000ms 长按 → 进入配网/OTA 门户
 #define TOUCH_ACTIVE_LEVEL 1
-#define TOUCH_DEBOUNCE_MS  50
-#define TOUCH_LONG_MS      1000
+#define TOUCH_DEBOUNCE_MS    50
+#define TOUCH_SHORT_MAX_MS   300
+#define TOUCH_MID_MIN_MS     500
+#define TOUCH_LONG_MS        3000
+
+// ===== WiFi =====
+#define WIFI_TX_POWER_RAW 44   // 11.0 dBm
+
+// ===== OTA =====
+#define FIRMWARE_VERSION  "2026.11.23"
+// GitHub Pages version.json
+#define OTA_CHECK_URL     "https://lucaswang0.github.io/esp32_pm2.5/firmware/version.json"
 
 // ===== 执行器 =====
 #define PIN_12V_SW   8    // 低电平触发继电器：LOW=12V 通，HIGH=断
