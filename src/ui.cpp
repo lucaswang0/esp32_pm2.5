@@ -24,18 +24,18 @@ static uint16_t levelColor(const UiData &d) {
   return C_RED;
 }
 
-static void drawCard(LovyanGFX &g, int x, int y, const char *value, const char *label) {
-  g.fillRoundRect(x, y, 40, 38, 6, C_CARD);
-  g.drawRoundRect(x, y, 40, 38, 6, C_BORDER);
+static void drawCard(LovyanGFX &g, int x, int y, int w, const char *value, const char *label, uint16_t color) {
+  g.fillRoundRect(x, y, w, 28, 5, C_CARD);
+  g.drawRoundRect(x, y, w, 28, 5, C_BORDER);
 
   g.setFont(&lgfx::fonts::FreeSansBold9pt7b);
   g.setTextDatum(lgfx::textdatum_t::middle_center);
-  g.setTextColor(C_TEXT);
-  g.drawString(value, x + 20, y + 14);
+  g.setTextColor(color);
+  g.drawString(value, x + w / 2, y + 11);
 
   g.setFont(&lgfx::fonts::Font0);
   g.setTextColor(C_DIM);
-  g.drawString(label, x + 20, y + 29);
+  g.drawString(label, x + w / 2, y + 23);
 }
 
 static void drawFrame(LovyanGFX &g, const UiData &d) {
@@ -83,42 +83,51 @@ static void drawFrame(LovyanGFX &g, const UiData &d) {
     g.fillRoundRect(8, 64, w, 6, 3, accent);
   }
 
-  // ===== 三张数据卡 =====
+  // ===== 四张数据卡（2×2 布局，占满下半屏 y=64-128）=====
+  // 62px 宽 × 28px 高，列间隙 2px；行 1 起点 y=66，行 2 起点 y=98
+  // 总高：28 + 4 + 28 = 60，从 y=66 到 y=126，顶部留出 2px 间隙给浓度条
   if (d.envValid) {
     snprintf(buf, sizeof(buf), "%.1fC", d.temp);
   } else {
     snprintf(buf, sizeof(buf), "--");
   }
-  drawCard(g, 2, 74, buf, "TEMP");
+  drawCard(g, 2, 66, 62, buf, "TEMP", C_TEXT);
 
   if (d.envValid) {
     snprintf(buf, sizeof(buf), "%.0f%%", d.hum);
   } else {
     snprintf(buf, sizeof(buf), "--");
   }
-  drawCard(g, 44, 74, buf, "HUM");
+  drawCard(g, 64, 66, 62, buf, "HUM", C_TEXT);
 
   snprintf(buf, sizeof(buf), "%u%%", d.duty);
-  drawCard(g, 86, 74, buf, "FAN");
+  drawCard(g, 2, 98, 62, buf, "DUTY", d.relayOn ? C_GREEN : C_DIM);
 
-  // ===== 底部状态行 =====
+  if (d.relayOn) {
+    snprintf(buf, sizeof(buf), "%u", d.rpm);
+  } else {
+    snprintf(buf, sizeof(buf), "--");
+  }
+  uint16_t rpmColor = C_DIM;
+  if (d.relayOn) {
+    rpmColor = d.fault ? C_RED : ((d.rpm < 500) ? C_YELLOW : C_GREEN);
+  }
+  drawCard(g, 64, 98, 62, buf, "RPM", rpmColor);
+
+  // 12V 指示圆点（左下角）
   uint16_t dot = d.fault ? C_RED : (d.relayOn ? C_GREEN : C_DIM);
-  g.fillCircle(10, 119, 2, dot);
+  g.fillCircle(8, 122, 2, dot);
 
+  // 小状态字：WARMUP / NO SENSOR / FAN ERR（正常时显示模式）
   g.setFont(&lgfx::fonts::Font0);
   g.setTextDatum(lgfx::textdatum_t::middle_left);
-  g.setTextColor(d.fault ? C_RED : (d.warmup ? C_YELLOW : C_TEXT));
-
-  const char *state = d.warmup ? "WARMUP"
-                      : (!d.pmValid) ? "NO SENSOR"
-                      : (d.fault) ? "FAN ERR"
-                                  : nullptr;
-  if (state) {
-    snprintf(buf, sizeof(buf), "%s  %s", d.relayOn ? "12V ON" : "12V OFF", state);
-  } else {
-    snprintf(buf, sizeof(buf), "%s  %u RPM", d.relayOn ? "12V ON" : "12V OFF", d.rpm);
-  }
-  g.drawString(buf, 16, 119);
+  g.setTextColor(d.fault ? C_RED : (d.warmup ? C_YELLOW : (!d.pmValid ? C_YELLOW : C_DIM)));
+  const char *subState = d.warmup ? "WARMUP"
+                        : (!d.pmValid) ? "NO SENSOR"
+                        : (d.fault) ? "FAN ERR"
+                                    : d.mode;
+  snprintf(buf, sizeof(buf), "%s", subState);
+  g.drawString(buf, 14, 122);
 }
 
 void uiBegin() {
